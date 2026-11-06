@@ -1,0 +1,351 @@
+================================================================================
+PROJECT 11: BROWSER HISTORY SIMULATOR
+Source Code
+================================================================================
+
+Course   : B.Tech CSE - Semester 3
+Subject  : Data Structures
+Core DS  : Two Stacks (Back Stack + Forward Stack)
+
+================================================================================
+COMPLETE SOURCE CODE
+================================================================================
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Browser History Simulator - Project 11</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #0f172a;
+      color: #f1f5f9;
+      padding: 20px;
+      max-width: 900px;
+      margin: auto;
+    }
+    h1 {
+      text-align: center;
+      color: #60a5fa;
+    }
+    .subtitle {
+      text-align: center;
+      color: #94a3b8;
+      margin-bottom: 25px;
+    }
+    .browser-bar {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      background: #1e293b;
+      padding: 12px;
+      border-radius: 8px;
+      flex-wrap: wrap;
+    }
+    input {
+      flex: 1;
+      min-width: 180px;
+      padding: 10px;
+      border-radius: 6px;
+      border: 1px solid #475569;
+      background: #0f172a;
+      color: white;
+      font-size: 15px;
+    }
+    button {
+      padding: 10px 16px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      background: #3b82f6;
+      color: white;
+      font-weight: bold;
+      font-size: 14px;
+    }
+    button:hover {
+      background: #2563eb;
+    }
+    button:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+    .page {
+      background: #1e293b;
+      padding: 35px 20px;
+      text-align: center;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+    .page h2 {
+      color: #93c5fd;
+      margin-bottom: 8px;
+    }
+    .stacks {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+    @media (max-width: 600px) {
+      .stacks {
+        grid-template-columns: 1fr;
+      }
+    }
+    .stack {
+      background: #1e293b;
+      border-radius: 8px;
+      padding: 15px;
+    }
+    .stack h3 {
+      margin-top: 0;
+      color: #93c5fd;
+      font-size: 16px;
+    }
+    .item {
+      background: #0f172a;
+      padding: 8px 12px;
+      margin: 6px 0;
+      border-radius: 5px;
+      border-left: 3px solid #3b82f6;
+      font-size: 14px;
+    }
+    .info {
+      background: #1e293b;
+      padding: 18px;
+      border-radius: 8px;
+      font-size: 14px;
+      color: #94a3b8;
+      line-height: 1.6;
+    }
+    .info h3 {
+      color: #93c5fd;
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Browser History Simulator</h1>
+  <p class="subtitle">Project 11 – Back & Forward using Two Stacks</p>
+
+  <div class="browser-bar">
+    <button id="btnBack" onclick="goBack()" disabled>← Back</button>
+    <button id="btnForward" onclick="goForward()" disabled>Forward →</button>
+    <input type="text" id="urlInput" placeholder="Enter URL (e.g. google.com)"
+           onkeydown="if(event.key==='Enter') visit()">
+    <button onclick="visit()">Visit</button>
+    <button onclick="goHome()">Home</button>
+  </div>
+
+  <div class="page">
+    <h2 id="currentPage">about:blank</h2>
+    <p id="pageInfo">Enter a URL and click Visit</p>
+  </div>
+
+  <div class="stacks">
+    <div class="stack">
+      <h3>⬅️ Back Stack</h3>
+      <div id="backDisplay">Empty</div>
+    </div>
+    <div class="stack">
+      <h3>Forward Stack ➡️</h3>
+      <div id="forwardDisplay">Empty</div>
+    </div>
+  </div>
+
+  <div class="info">
+    <h3>How it works</h3>
+    <ul>
+      <li><strong>Visit:</strong> Push current page to Back Stack → Clear Forward Stack → Set new page</li>
+      <li><strong>Back:</strong> Push current page to Forward Stack → Pop from Back Stack</li>
+      <li><strong>Forward:</strong> Push current page to Back Stack → Pop from Forward Stack</li>
+      <li><strong>Home:</strong> Clear both stacks</li>
+    </ul>
+  </div>
+
+<script>
+// ==========================================
+// STACK IMPLEMENTATION (FROM SCRATCH)
+// ==========================================
+class Stack {
+  constructor() {
+    this.items = [];
+  }
+
+  // Add element to top of stack
+  push(element) {
+    this.items.push(element);
+  }
+
+  // Remove and return top element
+  pop() {
+    if (this.isEmpty()) return null;
+    return this.items.pop();
+  }
+
+  // Return top element without removing
+  peek() {
+    if (this.isEmpty()) return null;
+    return this.items[this.items.length - 1];
+  }
+
+  // Check if stack is empty
+  isEmpty() {
+    return this.items.length === 0;
+  }
+
+  // Return number of elements
+  size() {
+    return this.items.length;
+  }
+
+  // Remove all elements
+  clear() {
+    this.items = [];
+  }
+
+  // Return items (top first) for display
+  getItems() {
+    return [...this.items].reverse();
+  }
+}
+
+// ==========================================
+// GLOBAL STATE
+// ==========================================
+const backStack = new Stack();
+const forwardStack = new Stack();
+let currentPage = "about:blank";
+
+// ==========================================
+// CORE FUNCTIONS
+// ==========================================
+
+// Visit a new page
+function visit() {
+  let url = document.getElementById("urlInput").value.trim().toLowerCase();
+
+  if (url === "") {
+    alert("Please enter a URL");
+    return;
+  }
+
+  // Clean URL
+  url = url.replace(/^https?:\/\//, "").replace(/\/$/, "");
+
+  if (url === currentPage) {
+    return;
+  }
+
+  // Push current page to Back Stack
+  if (currentPage !== "about:blank") {
+    backStack.push(currentPage);
+  }
+
+  // Clear Forward Stack (important browser behavior)
+  forwardStack.clear();
+
+  // Set new current page
+  currentPage = url;
+  document.getElementById("urlInput").value = "";
+  updateUI();
+}
+
+// Go Back
+function goBack() {
+  if (backStack.isEmpty()) return;
+
+  // Save current page to Forward Stack
+  forwardStack.push(currentPage);
+
+  // Move to previous page
+  currentPage = backStack.pop();
+  updateUI();
+}
+
+// Go Forward
+function goForward() {
+  if (forwardStack.isEmpty()) return;
+
+  // Save current page to Back Stack
+  backStack.push(currentPage);
+
+  // Move to next page
+  currentPage = forwardStack.pop();
+  updateUI();
+}
+
+// Home / Reset
+function goHome() {
+  backStack.clear();
+  forwardStack.clear();
+  currentPage = "about:blank";
+  document.getElementById("urlInput").value = "";
+  updateUI();
+}
+
+// ==========================================
+// UI UPDATE
+// ==========================================
+function updateUI() {
+  document.getElementById("currentPage").textContent = currentPage;
+
+  if (currentPage === "about:blank") {
+    document.getElementById("pageInfo").textContent = "Enter a URL and click Visit";
+  } else {
+    document.getElementById("pageInfo").textContent = "Currently viewing: " + currentPage;
+  }
+
+  // Enable/Disable buttons
+  document.getElementById("btnBack").disabled = backStack.isEmpty();
+  document.getElementById("btnForward").disabled = forwardStack.isEmpty();
+
+  // Render stacks
+  renderStack("backDisplay", backStack);
+  renderStack("forwardDisplay", forwardStack);
+}
+
+function renderStack(id, stack) {
+  const container = document.getElementById(id);
+  const items = stack.getItems();
+
+  if (items.length === 0) {
+    container.innerHTML = "Empty";
+    return;
+  }
+
+  container.innerHTML = items.map(function(url, index) {
+    return '<div class="item">' + url + (index === 0 ? " (TOP)" : "") + '</div>';
+  }).join("");
+}
+
+// Initialize
+updateUI();
+</script>
+
+</body>
+</html>
+
+
+================================================================================
+CORE LOGIC SUMMARY
+================================================================================
+
+Stack Class Methods:
+- push(element)  → Insert at top
+- pop()          → Remove from top
+- peek()         → View top element
+- isEmpty()      → Check if empty
+- clear()        → Empty the stack
+
+Main Operations:
+- Visit   → Push current to Back Stack + Clear Forward Stack
+- Back    → Push current to Forward Stack + Pop from Back Stack
+- Forward → Push current to Back Stack + Pop from Forward Stack
+- Home    → Clear both stacks
+
+================================================================================
+END OF SOURCE CODE
+================================================================================
